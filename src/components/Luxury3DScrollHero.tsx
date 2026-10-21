@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { motion, AnimatePresence } from 'motion/react';
 import { LiveMarketRates } from '../types';
 import { formatNumberFa } from '../mockData';
@@ -182,21 +183,26 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
     scene.add(particleSystem);
 
     // =========================================================================
-    // COMPOSITE 3D MODELS FOR EACH SCROLL CHAPTER
+    // COMPOSITE 3D MODELS FOR EACH SCROLL CHAPTER (Ultra-Fast Draco GLB)
     // =========================================================================
-    const stlLoader = new STLLoader();
+    const dracoLoader = new DRACOLoader();
+    const basePath = (import.meta.env.BASE_URL || './').replace(/\/?$/, '/');
+    dracoLoader.setDecoderPath(`${basePath}draco/`);
 
-    // CHAPTER 1: Twin Sculptural Gold Rings (Split from assets/ring2.stl)
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.setDRACOLoader(dracoLoader);
+
+    // CHAPTER 1: Twin Sculptural Gold Rings (ring_left.glb & ring_right.glb)
     const chapter1Group = new THREE.Group();
     scene.add(chapter1Group);
 
-    // Left Ring Container (Men's / Larger Ring or Left Split)
+    // Left Ring Container (Men's / Larger Ring)
     const leftBangleGroup = new THREE.Group();
     leftBangleGroup.position.set(-3.3, 0.25, 0.6);
     leftBangleGroup.rotation.set(0.5, 0.6, -0.3);
     chapter1Group.add(leftBangleGroup);
 
-    // Right Ring Container (Women's / Smaller Ring or Right Split)
+    // Right Ring Container (Women's / Smaller Ring)
     const rightBangleGroup = new THREE.Group();
     rightBangleGroup.position.set(3.3, -0.25, 0.6);
     rightBangleGroup.rotation.set(-0.4, -0.7, 0.4);
@@ -208,104 +214,99 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
     centerHalo.rotation.x = Math.PI / 2.3;
     chapter1Group.add(centerHalo);
 
-    // Load & Automatically Split ring2.stl into two independent 3D rings!
-    const ring2StlUrl = `${import.meta.env.BASE_URL || './'}assets/ring2.stl`.replace('//', '/');
-    stlLoader.load(
-      ring2StlUrl,
-      (fullRingGeo) => {
-        const posAttr = fullRingGeo.attributes.position;
-        const vertexCount = posAttr.count;
-        const leftPositions: number[] = [];
-        const rightPositions: number[] = [];
-
-        // Split triangles based on centroid X (gap is around X = 0.03)
-        for (let i = 0; i < vertexCount; i += 3) {
-          const x1 = posAttr.getX(i), y1 = posAttr.getY(i), z1 = posAttr.getZ(i);
-          const x2 = posAttr.getX(i + 1), y2 = posAttr.getY(i + 1), z2 = posAttr.getZ(i + 1);
-          const x3 = posAttr.getX(i + 2), y3 = posAttr.getY(i + 2), z3 = posAttr.getZ(i + 2);
-          const cx = (x1 + x2 + x3) / 3;
-
-          if (cx < 0.03) {
-            leftPositions.push(x1, y1, z1, x2, y2, z2, x3, y3, z3);
-          } else {
-            rightPositions.push(x1, y1, z1, x2, y2, z2, x3, y3, z3);
-          }
+    // Helper to extract mesh from loaded GLTF
+    const extractMesh = (gltf: any): THREE.Mesh | null => {
+      let found: THREE.Mesh | null = null;
+      gltf.scene.traverse((child: any) => {
+        if (child.isMesh && !found) {
+          found = child as THREE.Mesh;
         }
+      });
+      return found;
+    };
 
-        if (leftPositions.length > 0 && rightPositions.length > 0) {
-          const leftGeo = new THREE.BufferGeometry();
-          leftGeo.setAttribute('position', new THREE.Float32BufferAttribute(leftPositions, 3));
-          leftGeo.computeVertexNormals();
-          leftGeo.center();
-          leftGeo.computeBoundingBox();
-
-          const rightGeo = new THREE.BufferGeometry();
-          rightGeo.setAttribute('position', new THREE.Float32BufferAttribute(rightPositions, 3));
-          rightGeo.computeVertexNormals();
-          rightGeo.center();
-          rightGeo.computeBoundingBox();
-
-          // Compute shared scale so their relative size difference (men's vs women's) is preserved!
-          const sizeL = new THREE.Vector3();
-          const sizeR = new THREE.Vector3();
-          leftGeo.boundingBox?.getSize(sizeL);
-          rightGeo.boundingBox?.getSize(sizeR);
-          const maxOverallDim = Math.max(sizeL.x, sizeL.y, sizeL.z, sizeR.x, sizeR.y, sizeR.z);
-          const sharedScale = maxOverallDim > 0 ? 3.85 / maxOverallDim : 1;
-
-          const leftCustomRing = new THREE.Mesh(leftGeo, polishedGoldMat);
-          leftCustomRing.scale.setScalar(sharedScale);
-
-          const rightCustomRing = new THREE.Mesh(rightGeo, polishedGoldMat);
-          rightCustomRing.scale.setScalar(sharedScale);
-
-          leftBangleGroup.add(leftCustomRing);
-          rightBangleGroup.add(rightCustomRing);
+    // Load Left Ring GLB (237 KB)
+    const ringLeftUrl = `${basePath}assets/ring_left.glb`;
+    gltfLoader.load(
+      ringLeftUrl,
+      (gltf) => {
+        const mesh = extractMesh(gltf);
+        if (mesh && mesh.geometry) {
+          mesh.geometry.computeVertexNormals();
+          mesh.geometry.computeBoundingBox();
+          const bbox = mesh.geometry.boundingBox;
+          let s = 1;
+          if (bbox) {
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) s = 3.6 / maxDim;
+          }
+          const ringMesh = new THREE.Mesh(mesh.geometry, polishedGoldMat);
+          ringMesh.scale.setScalar(s);
+          leftBangleGroup.add(ringMesh);
         }
       },
       undefined,
-      (err) => {
-        console.warn('Could not load ring2.stl, keeping fallback rings:', err);
-      }
+      (err) => console.warn('Could not load ring_left.glb:', err)
     );
 
-    // CHAPTER 2: Custom User Uploaded 3D Gold Model (assets/gold2.stl)
+    // Load Right Ring GLB (223 KB)
+    const ringRightUrl = `${basePath}assets/ring_right.glb`;
+    gltfLoader.load(
+      ringRightUrl,
+      (gltf) => {
+        const mesh = extractMesh(gltf);
+        if (mesh && mesh.geometry) {
+          mesh.geometry.computeVertexNormals();
+          mesh.geometry.computeBoundingBox();
+          const bbox = mesh.geometry.boundingBox;
+          let s = 1;
+          if (bbox) {
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) s = 3.1 / maxDim;
+          }
+          const ringMesh = new THREE.Mesh(mesh.geometry, polishedGoldMat);
+          ringMesh.scale.setScalar(s);
+          rightBangleGroup.add(ringMesh);
+        }
+      },
+      undefined,
+      (err) => console.warn('Could not load ring_right.glb:', err)
+    );
+
+    // CHAPTER 2: Custom CAD Jewelry Model (gold2.glb, 438 KB)
     const chapter2Group = new THREE.Group();
     chapter2Group.position.set(0, -10, 0);
     scene.add(chapter2Group);
 
-    // Load the user's real CAD jewelry STL file (public/assets/gold2.stl)
-    const stlUrl = `${import.meta.env.BASE_URL || './'}assets/gold2.stl`.replace('//', '/');
-    stlLoader.load(
-      stlUrl,
-      (stlGeometry) => {
-        stlGeometry.computeVertexNormals();
-        stlGeometry.center();
-        stlGeometry.computeBoundingBox();
-
-        const bbox = stlGeometry.boundingBox;
-        let normalizeScale = 1;
-        if (bbox) {
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const maxDim = Math.max(size.x, size.y, size.z);
-          if (maxDim > 0) {
-            // Normalize model to fit nicely at ~4.4 world units in the stage
-            normalizeScale = 4.4 / maxDim;
+    const gold2Url = `${basePath}assets/gold2.glb`;
+    gltfLoader.load(
+      gold2Url,
+      (gltf) => {
+        const mesh = extractMesh(gltf);
+        if (mesh && mesh.geometry) {
+          mesh.geometry.computeVertexNormals();
+          mesh.geometry.center();
+          mesh.geometry.computeBoundingBox();
+          const bbox = mesh.geometry.boundingBox;
+          let normalizeScale = 1;
+          if (bbox) {
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) normalizeScale = 4.4 / maxDim;
           }
+          const customGoldMesh = new THREE.Mesh(mesh.geometry, polishedGoldMat);
+          customGoldMesh.scale.setScalar(normalizeScale);
+          customGoldMesh.rotation.x = -Math.PI / 6;
+          chapter2Group.add(customGoldMesh);
         }
-
-        const customGoldMesh = new THREE.Mesh(stlGeometry, polishedGoldMat);
-        customGoldMesh.scale.setScalar(normalizeScale);
-        // Most jewelry CAD (Matrix/Rhino) STL models are Z-up; tilt slightly towards camera
-        customGoldMesh.rotation.x = -Math.PI / 6;
-
-        chapter2Group.add(customGoldMesh);
       },
       undefined,
-      (err) => {
-        console.warn('Could not load gold2.stl, keeping fallback geometry:', err);
-      }
+      (err) => console.warn('Could not load gold2.glb:', err)
     );
 
     // CHAPTER 3: 24K Swiss Gold Bullion Bar Assembly (Beveled Ingot + Seal Frame + Stamps)
@@ -383,40 +384,36 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
     centerEmblemMesh.position.z = 0.08;
     chapter4Group.add(centerEmblemMesh);
 
-    // CHAPTER 5: Custom User Uploaded 3D Gold Model (assets/foot.stl)
+    // CHAPTER 5: Custom 3D Gold Model (foot.glb, 405 KB)
     const chapter5Group = new THREE.Group();
     chapter5Group.position.set(0, -10, 0);
     scene.add(chapter5Group);
 
-    const footStlUrl = `${import.meta.env.BASE_URL || './'}assets/foot.stl`.replace('//', '/');
-    stlLoader.load(
-      footStlUrl,
-      (footGeometry) => {
-        footGeometry.computeVertexNormals();
-        footGeometry.center();
-        footGeometry.computeBoundingBox();
-
-        const bbox = footGeometry.boundingBox;
-        let normalizeScale = 1;
-        if (bbox) {
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const maxDim = Math.max(size.x, size.y, size.z);
-          if (maxDim > 0) {
-            normalizeScale = 4.2 / maxDim;
+    const footUrl = `${basePath}assets/foot.glb`;
+    gltfLoader.load(
+      footUrl,
+      (gltf) => {
+        const mesh = extractMesh(gltf);
+        if (mesh && mesh.geometry) {
+          mesh.geometry.computeVertexNormals();
+          mesh.geometry.center();
+          mesh.geometry.computeBoundingBox();
+          const bbox = mesh.geometry.boundingBox;
+          let normalizeScale = 1;
+          if (bbox) {
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) normalizeScale = 4.2 / maxDim;
           }
+          const customFootMesh = new THREE.Mesh(mesh.geometry, polishedGoldMat);
+          customFootMesh.scale.setScalar(normalizeScale);
+          customFootMesh.rotation.x = -Math.PI / 6;
+          chapter5Group.add(customFootMesh);
         }
-
-        const customFootMesh = new THREE.Mesh(footGeometry, polishedGoldMat);
-        customFootMesh.scale.setScalar(normalizeScale);
-        customFootMesh.rotation.x = -Math.PI / 6;
-
-        chapter5Group.add(customFootMesh);
       },
       undefined,
-      (err) => {
-        console.warn('Could not load foot.stl, keeping fallback geometry:', err);
-      }
+      (err) => console.warn('Could not load foot.glb:', err)
     );
 
     // Pre-compile shaders
@@ -614,6 +611,7 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handlePointerMove);
       window.removeEventListener('resize', handleResize);
+      dracoLoader.dispose();
       renderer.dispose();
       if (mountEl.contains(renderer.domElement)) {
         mountEl.removeChild(renderer.domElement);
