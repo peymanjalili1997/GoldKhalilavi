@@ -10,4 +10,6 @@ coverage/
 .antigravity
 .vscode
 public/assets/aistudio/
+package-lock.json
+
 
