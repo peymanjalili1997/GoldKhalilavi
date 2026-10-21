@@ -447,6 +447,46 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       pointerRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
 
+    // Responsive mobile detection & scale calculation
+    let isMobile = false;
+    let responsiveScale = 1.0;
+    let baseCameraZ = 11.0;
+    let ringSpacingX = 3.3;
+
+    const updateResponsiveParams = () => {
+      if (!mountEl) return;
+      const w = mountEl.clientWidth;
+      const h = mountEl.clientHeight;
+      const aspect = w / h;
+
+      // Detect mobile screens or portrait orientations
+      isMobile = w < 768 || aspect < 0.85;
+
+      if (isMobile) {
+        // Dynamic scale factor based on screen aspect ratio
+        responsiveScale = Math.min(0.65, Math.max(0.42, aspect * 1.1));
+        // On mobile, camera moves slightly back to give comfortable breathing room
+        baseCameraZ = 13.0;
+        // The two luxury rings in chapter 1 come closer to center so neither overflows
+        ringSpacingX = Math.min(1.4, Math.max(1.0, aspect * 2.6));
+      } else {
+        responsiveScale = 1.0;
+        baseCameraZ = 11.0;
+        ringSpacingX = 3.3;
+      }
+
+      // Apply scale to all 5 3D chapters
+      chapter1Group.scale.setScalar(responsiveScale);
+      chapter2Group.scale.setScalar(responsiveScale);
+      chapter3Group.scale.setScalar(responsiveScale);
+      chapter4Group.scale.setScalar(responsiveScale);
+      chapter5Group.scale.setScalar(responsiveScale);
+
+      // Adjust rings spacing
+      leftBangleGroup.position.x = -ringSpacingX;
+      rightBangleGroup.position.x = ringSpacingX;
+    };
+
     const handleResize = () => {
       if (!mountEl) return;
       const w = mountEl.clientWidth;
@@ -454,12 +494,14 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      updateResponsiveParams();
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('mousemove', handlePointerMove, { passive: true });
     window.addEventListener('resize', handleResize);
     handleScroll();
+    updateResponsiveParams();
 
     // 9. Animation Loop with Smooth Exponential Damping
     const clock = new THREE.Clock();
@@ -495,9 +537,9 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
 
       // Subtle camera parallax with pointer
       _targetCameraPos.set(
-        pointerRef.current.x * 0.45,
-        pointerRef.current.y * 0.35,
-        11
+        pointerRef.current.x * (isMobile ? 0.2 : 0.45),
+        pointerRef.current.y * (isMobile ? 0.15 : 0.35),
+        baseCameraZ
       );
       camera.position.lerp(_targetCameraPos, 0.05);
       camera.lookAt(0, 0, 0);
@@ -509,9 +551,10 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       // Continuous sculptural rotation + scroll choreography for each 3D chapter
       // Continuous normalized phase: s in [0, 4] across 5 chapters
       const s = smoothedProgress * 4.0;
+      const chapterSpacing = isMobile ? 11.0 : 9.5;
 
       // Chapter 1: Twin Split Gold Rings (s = 0..1) - Independent organic 3D rotation & float
-      const c1Offset = (0 - s) * 9.5;
+      const c1Offset = (0 - s) * chapterSpacing;
       chapter1Group.position.y = c1Offset;
       leftBangleGroup.position.y = 0.25 + Math.sin(elapsed * 0.9) * 0.22;
       leftBangleGroup.rotation.x = 0.55 + elapsed * 0.42 + s * 2.1;
@@ -527,14 +570,14 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       chapter1Group.visible = Math.abs(0 - s) < 1.35;
 
       // Chapter 2: Cartier Helix Chain (s = 1)
-      const c2Offset = (1 - s) * 9.5;
+      const c2Offset = (1 - s) * chapterSpacing;
       chapter2Group.position.y = c2Offset;
       chapter2Group.rotation.y = elapsed * 0.6 + s * 2.5;
       chapter2Group.rotation.z = Math.sin(elapsed * 0.5) * 0.12;
       chapter2Group.visible = Math.abs(1 - s) < 1.35;
 
       // Chapter 3: 24K Bullion Ingot (s = 2)
-      const c3Offset = (2 - s) * 9.5;
+      const c3Offset = (2 - s) * chapterSpacing;
       chapter3Group.position.y = c3Offset;
       chapter3Group.rotation.y = Math.sin(elapsed * 0.65) * 0.55 + (s - 2) * 1.5;
       chapter3Group.rotation.x = Math.cos(elapsed * 0.45) * 0.18;
@@ -542,14 +585,14 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
       chapter3Group.visible = Math.abs(2 - s) < 1.35;
 
       // Chapter 4: Persian Gold Coin (s = 3)
-      const c4Offset = (3 - s) * 9.5;
+      const c4Offset = (3 - s) * chapterSpacing;
       chapter4Group.position.y = c4Offset;
       chapter4Group.rotation.y = elapsed * 0.75 + (s - 3) * 2.2;
       chapter4Group.rotation.x = Math.sin(elapsed * 0.5) * 0.2;
       chapter4Group.visible = Math.abs(3 - s) < 1.35;
 
       // Chapter 5: Custom Foot Gold Model (s = 4)
-      const c5Offset = (4 - s) * 9.5;
+      const c5Offset = (4 - s) * chapterSpacing;
       chapter5Group.position.y = c5Offset;
       chapter5Group.rotation.y = elapsed * 0.55;
       chapter5Group.visible = Math.abs(4 - s) < 1.35;
@@ -727,12 +770,12 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="max-w-3xl mx-auto text-center space-y-5 sm:space-y-6 pointer-events-auto"
+              className="max-w-3xl mx-auto text-center space-y-3.5 sm:space-y-6 pointer-events-auto px-2"
             >
               {/* 1. Chapter Overline */}
               <motion.div
                 variants={chapterItemVariants}
-                className="inline-flex items-center gap-2.5 text-xs sm:text-sm font-bold tracking-normal text-[#E6C987] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
+                className="inline-flex items-center gap-2.5 text-[11px] sm:text-sm font-bold tracking-normal text-[#E6C987] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
               >
                 <span className="text-[#C5A059]">✦</span>
                 <span>{currentChapterData.overline}</span>
@@ -742,7 +785,7 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
               {/* 2. Main Title Line 1 */}
               <motion.h1
                 variants={chapterItemVariants}
-                className="font-persian-title text-3xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFFDF7] via-[#F5E0B5] to-[#C5A059] leading-normal py-1 drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)]"
+                className="font-persian-title text-2xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFFDF7] via-[#F5E0B5] to-[#C5A059] leading-tight py-1 drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)]"
               >
                 {currentChapterData.titleLine1}
               </motion.h1>
@@ -750,7 +793,7 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
               {/* 3. Main Title Line 2 */}
               <motion.div
                 variants={chapterItemVariants}
-                className="font-persian-title font-extrabold text-2xl sm:text-4xl lg:text-5xl text-white leading-snug drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)]"
+                className="font-persian-title font-extrabold text-lg sm:text-4xl lg:text-5xl text-white leading-snug drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)]"
               >
                 {currentChapterData.titleLine2}
               </motion.div>
@@ -758,7 +801,7 @@ export const Luxury3DScrollHero: React.FC<Luxury3DScrollHeroProps> = ({
               {/* 4. Poetic Description */}
               <motion.p
                 variants={chapterItemVariants}
-                className="font-persian-title text-xs sm:text-sm lg:text-base text-[#D4E2DC] max-w-xl mx-auto leading-relaxed font-medium drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
+                className="font-persian-title text-xs sm:text-sm lg:text-base text-[#D4E2DC] max-w-xl mx-auto leading-relaxed font-medium drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] line-clamp-3 sm:line-clamp-none px-2"
               >
                 {currentChapterData.description}
               </motion.p>
