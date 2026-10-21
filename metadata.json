@@ -1,6 +1,1 @@
-{
-  "name": "خلیلاوی گلد | طلا، شمش و سکه",
-  "description": "فروشگاه آنلاین طلا و جواهر، شمش و سکه خلیلاوی گلد با نرخ لحظه‌ای، فرمول شفاف طلا و خرید اقساطی",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
+{"name":"خلیلاوی گلد | طلا، شمش و سکه","description":"فروشگاه آنلاین طلا و جواهر، شمش و سکه خلیلاوی گلد با نرخ لحظه‌ای، فرمول شفاف طلا و خرید اقساطی","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
