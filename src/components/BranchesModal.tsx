@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BRANCHES } from '../mockData';
-import { X, MapPin, Phone, Clock, Award } from 'lucide-react';
+import { X, MapPin, Phone, Clock, Award, ExternalLink } from 'lucide-react';
 
 interface BranchesModalProps {
   isOpen: boolean;
@@ -35,9 +35,9 @@ export const BranchesModal: React.FC<BranchesModalProps> = ({ isOpen, onClose })
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-[#E8E1D1] mb-6">
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-[#0B3B2E]">نشانی شعب حضوری خلیلاوی گلد</h2>
+                <h2 className="text-lg sm:text-xl font-extrabold text-[#0B3B2E]">نشانی شعب حضوری خلیلاوی گلد در اهواز</h2>
                 <p className="text-xs text-[#708077] mt-1">
-                  مراجعه حضوری جهت تحویل سفارش، امانت‌گذاری طلا و مشاوره تخصصی
+                  مراجعه حضوری جهت تحویل سفارش، معاملات شمش و سکه، امانت‌گذاری طلا و مشاوره
                 </p>
               </div>
               <button
@@ -49,40 +49,89 @@ export const BranchesModal: React.FC<BranchesModalProps> = ({ isOpen, onClose })
             </div>
 
             {/* Branches List */}
-            <div className="space-y-5">
-              {Object.values(BRANCHES).map((branch) => (
-                <div
-                  key={branch.id}
-                  className="bg-white border border-[#E8E1D1] rounded-2xl p-5 shadow-xs space-y-3"
-                >
-                  <div>
-                    <h3 className="font-bold text-base text-[#0B3B2E]">{branch.name}</h3>
-                    <div className="text-xs text-[#8A7A5D] font-medium mt-0.5">{branch.subTitle}</div>
+            <div className="space-y-6">
+              {Object.values(BRANCHES).map((branch) => {
+                const mapCoordinates = branch.id === 'branch_jewelry' ? '31.3210,48.6780' : '31.3202,48.6835';
+                const mapEmbedUrl = `https://maps.google.com/maps?q=${mapCoordinates}&hl=fa&z=16&output=embed`;
+                const mapDirectUrl = `https://www.google.com/maps/search/?api=1&query=${mapCoordinates}`;
+
+                return (
+                  <div
+                    key={branch.id}
+                    className="bg-white border border-[#E8E1D1] rounded-2xl p-5 shadow-xs space-y-4"
+                  >
+                    <div>
+                      <h3 className="font-bold text-base text-[#0B3B2E]">{branch.name}</h3>
+                      <div className="text-xs text-[#8A7A5D] font-medium mt-0.5">{branch.subTitle}</div>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs text-[#425048] pt-3 border-t border-[#F0EBE0]">
+                      <div className="flex items-start gap-2.5">
+                        <MapPin className="w-4 h-4 text-[#C5A059] shrink-0 mt-0.5" />
+                        <span className="font-medium text-[#11221C] leading-relaxed">{branch.address}</span>
+                      </div>
+
+                      {/* Google Map of Ahvaz branch */}
+                      <div className="pt-2 pb-1">
+                        <div className="rounded-xl overflow-hidden border border-[#E5DEC9] bg-[#F5F2EB] shadow-xs">
+                          <iframe
+                            title={`نقشه گوگل ${branch.name}`}
+                            src={mapEmbedUrl}
+                            className="w-full h-40 sm:h-44 border-0 block"
+                            loading="lazy"
+                          />
+                          <div className="px-3 py-2 bg-[#FAF7F2] border-t border-[#E5DEC9] flex items-center justify-between">
+                            <span className="text-[11px] text-[#708077] flex items-center gap-1.5 font-medium">
+                              <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
+                              <span>اهواز · خیابان نادری</span>
+                            </span>
+                            <a
+                              href={mapDirectUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0B3B2E] hover:text-[#C5A059] transition-colors"
+                            >
+                              <span>مسیریابی در نقشه گوگل</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-2.5">
+                          <Phone className="w-4 h-4 text-[#C5A059] shrink-0" />
+                          <a href={`tel:${branch.phone}`} className="font-mono text-sm tracking-wide text-[#0B3B2E] font-bold hover:underline">
+                            {branch.phone}
+                          </a>
+                        </div>
+
+                        {branch.instagramHandle && (
+                          <a
+                            href={branch.instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] border border-[#E5DEC9] text-[#0B3B2E] text-[11px] font-bold hover:bg-[#E5DEC9] transition-colors"
+                          >
+                            <span className="text-[#C5A059]">@</span>
+                            <span className="font-mono">{branch.instagramHandle}</span>
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <Clock className="w-4 h-4 text-[#C5A059] shrink-0" />
+                        <span>{branch.workingHours}</span>
+                      </div>
+
+                      <div className="flex items-start gap-2.5 pt-1 text-[#60736A]">
+                        <Award className="w-4 h-4 text-[#0B3B2E] shrink-0 mt-0.5" />
+                        <span className="text-[11px] leading-relaxed">{branch.specialty}</span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="space-y-2.5 text-xs text-[#425048] pt-3 border-t border-[#F0EBE0]">
-                    <div className="flex items-start gap-2.5">
-                      <MapPin className="w-4 h-4 text-[#C5A059] shrink-0 mt-0.5" />
-                      <span className="font-medium text-[#11221C]">{branch.address}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-                      <Phone className="w-4 h-4 text-[#C5A059] shrink-0" />
-                      <span className="font-mono text-sm tracking-wide text-[#0B3B2E] font-bold">{branch.phone}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-                      <Clock className="w-4 h-4 text-[#C5A059] shrink-0" />
-                      <span>{branch.workingHours}</span>
-                    </div>
-
-                    <div className="flex items-start gap-2.5 pt-1 text-[#60736A]">
-                      <Award className="w-4 h-4 text-[#0B3B2E] shrink-0 mt-0.5" />
-                      <span className="text-[11px] leading-relaxed">{branch.specialty}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#E8E1D1] text-center">

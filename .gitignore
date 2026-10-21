@@ -6,6 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
-.aistudio/
-.antigravity/
-.vscode/
+.aistudio
+.antigravity
+.vscode
+public/assets/aistudio/
+

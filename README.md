@@ -1,19 +1,35 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# گالری طلا، شمش و مسکوکات رضا خلیلاوی (KHALILAVI GOLD)
 
-# Run and deploy your AI Studio app
+وب‌اپلیکیشن فروشگاه آنلاین طلا، شمش ۲۴ عیار و سکه بانکی با رندر سه‌بعدی تعاملی طلا (Three.js)، محاسبه شفاف و لحظه‌ای مظنه، خرید اقساطی، و پیش‌فاکتور رسمی.
 
-This contains everything you need to run your app locally.
-https://ai.studio/apps/1b1b0723-3df5-4a93-8ae8-18a101aea1da
+---
 
-## Run Locally
+## 🚀 راهنمای فعال‌سازی پیش‌نمایش در گیت‌هاب پیجز (GitHub Pages)
 
-**Prerequisites:**  Node.js
+تمامی فایل‌ها و پیکربندی‌های لازم برای استقرار خودکار بر روی **GitHub Pages** در پروژه تعبیه شده است:
 
+### روش ۱: استقرار کاملاً خودکار با GitHub Actions (پیشنهادی)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. پروژه را به مخزن (Repository) گیت‌هاب خود **Push** کنید:
+   ```bash
+   git add .
+   git commit -m "Deploy Khalilavi Gold to GitHub Pages"
+   git push origin main
+   ```
+2. در صفحه مخزن خود در گیت‌هاب، به تب **Settings** بروید.
+3. از منوی سمت چپ، بخش **Pages** را انتخاب کنید.
+4. در بخش **Build and deployment**، گزینه **Source** را روی **GitHub Actions** قرار دهید.
+5. کار تمام است! با هر بار پوش کردن، ورک‌فلو خودکار اجرا شده و سایت در آدرس زیر در دسترس خواهد بود:
+   ```
+   https://<username>.github.io/<repo-name>/
+   ```
+
+---
+
+## 🛠 امکانات آماده‌شده برای سازگاری با GitHub Pages
+
+- **تنظیم بیس مسیر در Vite (`base: './'`):** بدون وابستگی به نام ریپازیتوری، تمام فایل‌های JS، CSS، فونت‌ها و مدل‌های سه‌بعدی به درستی لود می‌شوند.
+- **اکشن استقرار اختصاصی (`.github/workflows/deploy.yml`):** با استفاده از اکشن‌های رسمی گیت‌هاب `actions/deploy-pages@v4` و `npm install`.
+- **فایل `.nojekyll`:** برای اطمینان از خوانده شدن تمام است‌های هش‌شده Vite بدون تداخل با موتور Jekyll گیت‌هاب.
+- **فایل `404.html` هدایت هوشمند:** جلوگیری از خطای ۴۰۴ در زمان رفرش صفحات یا بوکمارک مستقیم.
+- **لود امن مدل‌های ۳D STL و لوگوی رسمی:** اتصال کامل با متغیر `import.meta.env.BASE_URL`.

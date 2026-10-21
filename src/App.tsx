@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   BRANCHES,
@@ -12,22 +12,21 @@ import { GoldProduct, ProductCategory, CartItem, LiveMarketRates } from './types
 import { LivePriceTicker } from './components/LivePriceTicker';
 import { Header } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { Luxury3DScrollHero } from './components/Luxury3DScrollHero';
 import { ProductCard } from './components/ProductCard';
 import { SingleProductView } from './components/SingleProductView';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutView } from './components/CheckoutView';
 import { BranchesModal } from './components/BranchesModal';
 import { InstallmentGuideModal } from './components/InstallmentGuideModal';
-import { ProductImageVisual } from './components/ProductVisuals';
 import {
   ShieldCheck,
-  TrendingUp,
-  TrendingDown,
   MapPin,
   Award,
   CheckCircle2,
   Scale,
-  ArrowLeft
+  Landmark,
+  Instagram,
 } from 'lucide-react';
 
 export default function App() {
@@ -40,6 +39,9 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<GoldProduct | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   
+  // Track whether user is inside the 3D Hero Section (for transparent header)
+  const [isOverHero, setIsOverHero] = useState<boolean>(true);
+
   // Cart State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -56,6 +58,32 @@ export default function App() {
     guaranteeType: 'sayyadi_check' | 'gold_collateral';
   } | undefined>(undefined);
   const [completedOrder, setCompletedOrder] = useState<any>(null);
+
+  // Monitor scroll position relative to the 3D Hero section
+  useEffect(() => {
+    const checkHeroOverlap = () => {
+      if (currentView !== 'home') {
+        setIsOverHero(false);
+        return;
+      }
+      const heroEl = document.getElementById('hero-3d-section');
+      if (!heroEl) {
+        setIsOverHero(false);
+        return;
+      }
+      const rect = heroEl.getBoundingClientRect();
+      // Header + Ticker is ~110px tall. Keep transparent while hero fills the viewport behind header
+      setIsOverHero(rect.bottom > 110);
+    };
+
+    checkHeroOverlap();
+    window.addEventListener('scroll', checkHeroOverlap, { passive: true });
+    window.addEventListener('resize', checkHeroOverlap);
+    return () => {
+      window.removeEventListener('scroll', checkHeroOverlap);
+      window.removeEventListener('resize', checkHeroOverlap);
+    };
+  }, [currentView]);
 
   // Simulation of live price refresh
   const handleRefreshRates = () => {
@@ -162,41 +190,67 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExploreCatalog = (cat?: ProductCategory | 'all') => {
+    if (cat) {
+      setSelectedCategory(cat);
+    }
+    if (currentView !== 'home') {
+      setCurrentView('home');
+    }
+    setTimeout(() => {
+      const catalog = document.getElementById('catalog-section');
+      catalog?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+  };
+
   const filteredProducts = products.filter(item => {
     if (selectedCategory === 'all') return true;
     return item.category === selectedCategory;
   });
 
   const totalCartCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
+  const isHeaderTransparent = currentView === 'home' && isOverHero;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#11221C] selection:bg-[#0B3B2E] selection:text-[#E6C987]">
-      {/* 1. TOP LIVE TICKER (18K, 24K, USD scrolling news ticker above header) */}
-      <LivePriceTicker
-        rates={rates}
-        onRefresh={handleRefreshRates}
-        isUpdating={isUpdatingRates}
-      />
+      {/* FIXED TOP WRAPPER: Transparent over 3D Hero, Green Ticker + White Header after Hero */}
+      <div className="fixed top-0 left-0 right-0 z-40">
+        <LivePriceTicker
+          rates={rates}
+          onRefresh={handleRefreshRates}
+          isUpdating={isUpdatingRates}
+          isTransparent={isHeaderTransparent}
+        />
 
-      {/* 2. MINIMALIST LUXURY HEADER */}
-      <Header
-        cartCount={totalCartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        selectedCategory={selectedCategory}
-        onSelectCategory={(cat) => {
-          setSelectedCategory(cat);
-          if (currentView !== 'home') setCurrentView('home');
-        }}
-        onOpenBranchesModal={() => setIsBranchesModalOpen(true)}
-        onOpenInstallmentGuide={() => setIsInstallmentGuideOpen(true)}
-        onGoHome={() => setCurrentView('home')}
-      />
+        <Header
+          cartCount={totalCartCount}
+          onOpenCart={() => setIsCartOpen(true)}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(cat) => {
+            setSelectedCategory(cat);
+            if (currentView !== 'home') {
+              setCurrentView('home');
+            }
+            setTimeout(() => {
+              const catalog = document.getElementById('catalog-section');
+              catalog?.scrollIntoView({ behavior: 'smooth' });
+            }, 50);
+          }}
+          onOpenBranchesModal={() => setIsBranchesModalOpen(true)}
+          onOpenInstallmentGuide={() => setIsInstallmentGuideOpen(true)}
+          onGoHome={() => {
+            setCurrentView('home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          isTransparent={isHeaderTransparent}
+        />
+      </div>
 
-      {/* MAIN VIEW ROUTER WITH SMOOTH MOTION */}
-      <main className="flex-1">
+      {/* MAIN VIEW ROUTER */}
+      <main className={`flex-1 ${currentView !== 'home' ? 'pt-26 md:pt-30' : ''}`}>
         <AnimatePresence mode="wait">
           
-          {/* VIEW A: HOME STOREFRONT */}
+          {/* VIEW A: HOME STOREFRONT WITH FULL-VIEWPORT 3D SCROLL EXPERIENCE */}
           {currentView === 'home' && (
             <motion.div
               key="home-view"
@@ -204,140 +258,23 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.35 }}
-              className="space-y-10 sm:space-y-16 pb-24 md:pb-16"
+              className="pb-24 md:pb-16"
             >
-              {/* HERO CAMPAIGN SECTION */}
-              <section className="relative border-b border-[#E8E1D1] bg-gradient-to-b from-[#F5EFE2] via-[#FAF7F2] to-[#FAF7F2] overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-18">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
-                    
-                    {/* Left/Right Editorial Copy (7 cols) */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                      className="lg:col-span-7 flex flex-col justify-between space-y-6"
-                    >
-                      <div className="space-y-4 sm:space-y-6">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-[#8A7A5D]">
-                          <span>بوتیک طلا، شمش و مسکوکات</span>
-                          <span>·</span>
-                          <span className="text-[#0B3B2E]">اصالت تضمین‌شده اتحادیه</span>
-                        </div>
+              {/* ZALORE-INSPIRED 3D SCROLL STORYTELLING STAGE */}
+              <Luxury3DScrollHero
+                rates={rates}
+                onExploreCatalog={handleExploreCatalog}
+                onOpenInstallmentGuide={() => setIsInstallmentGuideOpen(true)}
+                onOpenBranchesModal={() => setIsBranchesModalOpen(true)}
+              />
 
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B3B2E] tracking-tight leading-[1.22] text-balance">
-                          خلیلاوی گلد؛ اصالت طلا و شکوه سرمایه‌گذاری ماندگار
-                        </h1>
-
-                        <p className="text-sm sm:text-base text-[#4A5B52] leading-relaxed max-w-xl">
-                          کلکسیونی منتخب از طلای دست‌ساز ۱۸ عیار، شمش‌های سوئیسی ۲۴ عیار و مسکوکات بانکی با محاسبه شفاف لحظه‌ای و شرایط ویژه خرید اقساطی.
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-3 pt-1">
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => {
-                              const catalog = document.getElementById('catalog-section');
-                              catalog?.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                            className="px-6 py-3.5 rounded-2xl bg-[#0B3B2E] text-white font-bold text-xs sm:text-sm hover:bg-[#072920] transition-colors cursor-pointer shadow-md flex items-center gap-2 min-h-[46px]"
-                          >
-                            <span>مشاهده کلکسیون و خرید آنلاین</span>
-                            <ArrowLeft className="w-4 h-4 text-[#E6C987]" />
-                          </motion.button>
-
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => setIsInstallmentGuideOpen(true)}
-                            className="px-5 py-3.5 rounded-2xl border border-[#0B3B2E] text-[#0B3B2E] font-bold text-xs sm:text-sm hover:bg-[#F3EFE6] transition-colors cursor-pointer min-h-[46px]"
-                          >
-                            شرایط خرید اقساطی
-                          </motion.button>
-                        </div>
-                      </div>
-
-                      {/* Live Market Board Widget (2x2 Clean Grid for Mobile & Desktop) */}
-                      <div className="pt-4">
-                        <div className="bg-white border border-[#E5DEC9] rounded-3xl p-4 sm:p-5 shadow-xs">
-                          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#EFE9DC]">
-                            <span className="text-xs font-bold text-[#0B3B2E]">تابلو نرخ لحظه‌ای بازار طلا و ارز</span>
-                            <span className="text-[11px] text-[#8A7A5D]">{rates.lastUpdate}</span>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                            <div className="p-2.5 rounded-2xl bg-[#FAF7F2] border border-[#EDE5D4]">
-                              <div className="text-[10px] text-[#708077]">طلای ۱۸ عیار (گرم)</div>
-                              <div className="text-sm sm:text-base font-black text-[#0B3B2E] tabular-nums mt-0.5">
-                                {formatPriceToman(rates.gold18kGram)} <span className="text-[10px] font-normal">ت</span>
-                              </div>
-                            </div>
-                            <div className="p-2.5 rounded-2xl bg-[#FAF7F2] border border-[#EDE5D4]">
-                              <div className="text-[10px] text-[#708077]">شمش ۲۴ عیار (گرم)</div>
-                              <div className="text-sm sm:text-base font-black text-[#0B3B2E] tabular-nums mt-0.5">
-                                {formatPriceToman(rates.gold24kGram)} <span className="text-[10px] font-normal">ت</span>
-                              </div>
-                            </div>
-                            <div className="p-2.5 rounded-2xl bg-[#FAF7F2] border border-[#EDE5D4]">
-                              <div className="text-[10px] text-[#708077]">سکه تمام امامی</div>
-                              <div className="text-sm sm:text-base font-black text-[#0B3B2E] tabular-nums mt-0.5">
-                                {formatPriceToman(rates.emamiCoin)} <span className="text-[10px] font-normal">ت</span>
-                              </div>
-                            </div>
-                            <div className="p-2.5 rounded-2xl bg-[#FAF7F2] border border-[#EDE5D4]">
-                              <div className="text-[10px] text-[#708077]">دلار بازار آزاد</div>
-                              <div className="text-sm sm:text-base font-black text-[#0B3B2E] tabular-nums mt-0.5">
-                                {formatPriceToman(rates.usdTomans)} <span className="text-[10px] font-normal">ت</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    {/* Hero Visual Showcase Card (5 cols) */}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-                      onClick={() => handleSelectProduct(products[0])}
-                      className="lg:col-span-5 relative rounded-3xl overflow-hidden border border-[#DECFA8] bg-[#0B3B2E] p-6 sm:p-8 flex flex-col justify-between cursor-pointer group shadow-xl"
-                    >
-                      <div className="flex items-center justify-between text-xs text-[#E6C987]">
-                        <span className="font-semibold">پیشنهاد ویژه گالری</span>
-                        <span className="font-brand tracking-widest uppercase">KHALILAVI ROYAL</span>
-                      </div>
-
-                      <div className="my-4 aspect-[4/3] rounded-2xl overflow-hidden border border-[#C5A059]/30">
-                        <ProductImageVisual
-                          type="necklace"
-                          className="w-full h-full group-hover:scale-105 transition-transform duration-700"
-                          alt="گردنبند رویال کارتیه"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="text-xs text-[#C5A059]">طلای ۱۸ عیار دست‌ساز · وزن ۱۶.۴۵ گرم</div>
-                        <div className="flex items-end justify-between gap-2">
-                          <h3 className="text-lg font-bold text-white">گردنبند رویال کارتیه ۱۸ عیار</h3>
-                          <span className="text-xs font-semibold text-[#E6C987] group-hover:translate-x-[-4px] transition-transform whitespace-nowrap">
-                            مشاهده جزئیات ←
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                  </div>
-                </div>
-              </section>
-
-              {/* CATALOG SECTION */}
-              <section id="catalog-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+              {/* CATALOG SECTION ON WARM IVORY LUXURY CANVAS */}
+              <section id="catalog-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 sm:pt-20 space-y-6 sm:space-y-8 scroll-mt-28">
                 
-                {/* Category Segmented Filter Bar (No Branch Mentions) */}
+                {/* Category Segmented Filter Bar */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E8E1D1]">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B3B2E]">کلکسیون طلا، شمش و مسکوکات</h2>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B3B2E]">ویترین آنلاین طلا، شمش و مسکوکات</h2>
                     <p className="text-xs text-[#708077] mt-1">
                       تمامی قیمت‌ها به صورت زنده بر اساس نرخ لحظه‌ای تابلو محاسبه شده‌اند
                     </p>
@@ -399,8 +336,8 @@ export default function App() {
 
               </section>
 
-              {/* CRAFTSMANSHIP & ADDRESSES SECTION (Branch names only in addresses) */}
-              <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* CRAFTSMANSHIP & ADDRESSES SECTION */}
+              <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 sm:pt-20">
                 <div className="bg-white border border-[#E5DEC9] rounded-3xl p-6 sm:p-10 space-y-8 shadow-xs">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 pb-8 border-b border-[#EFE9DC]">
                     <div className="space-y-2">
@@ -442,17 +379,32 @@ export default function App() {
                         className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] flex flex-col justify-between space-y-3"
                       >
                         <div>
-                          <div className="font-bold text-sm text-[#0B3B2E] flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-[#C5A059] shrink-0" />
-                            <span>{branch.name}</span>
+                          <div className="font-bold text-sm text-[#0B3B2E] flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-[#C5A059] shrink-0" />
+                              <span>{branch.name}</span>
+                            </div>
+                            {branch.instagramHandle && (
+                              <a
+                                href={branch.instagramUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#E5DEC9] text-[#0B3B2E] text-[10px] font-bold hover:bg-[#E5DEC9] transition-colors"
+                              >
+                                <span className="text-[#C5A059]">@</span>
+                                <span className="font-mono">{branch.instagramHandle}</span>
+                              </a>
+                            )}
                           </div>
-                          <p className="text-xs text-[#425048] mt-1.5 pr-6">
+                          <p className="text-xs text-[#425048] mt-2 pr-6 leading-relaxed">
                             {branch.address}
                           </p>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-2 border-t border-[#E8E1D1] pr-6">
                           <span className="text-[#708077]">{branch.workingHours}</span>
-                          <span className="font-mono font-bold text-[#0B3B2E]">{branch.phone}</span>
+                          <a href={`tel:${branch.phone}`} className="font-mono font-bold text-[#0B3B2E] hover:underline">
+                            {branch.phone}
+                          </a>
                         </div>
                       </div>
                     ))}
@@ -613,70 +565,205 @@ export default function App() {
         onClose={() => setIsInstallmentGuideOpen(false)}
       />
 
-      {/* 6. MINIMALIST LUXURY FOOTER (Branch names appear cleanly in the address blocks) */}
-      <footer className="border-t border-[#E8E1D1] bg-[#051F18] text-[#D8E4DE] text-xs pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      {/* 6. GRAND LUXURY ATELIER FOOTER */}
+      <footer className="relative border-t border-[#C5A059]/30 bg-radial-[at_top] from-[#07261E] via-[#041712] to-[#020B08] text-[#D8E4DE] overflow-hidden pb-24 md:pb-8 pt-16 sm:pt-24">
+        {/* Decorative Golden Ambient Radiance */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-44 bg-gradient-to-b from-[#C5A059]/15 to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#C5A059] to-transparent opacity-60" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 relative z-10">
+
+          {/* Main Content Columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12">
             
-            {/* Brand column */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full border border-[#C5A059] flex items-center justify-center bg-[#0B3B2E]">
-                  <span className="font-brand font-bold text-sm text-[#E6C987]">KG</span>
+            {/* Grand Brand Identity Statement (5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#C5A059]/15 border border-[#C5A059]/40 text-[#E6C987] text-[11px] tracking-widest uppercase">
+                  <span>خلیلاوی گلد · اهواز</span>
+                  <span>·</span>
+                  <span>تاسیس ۱۳۷۸</span>
                 </div>
-                <span className="font-brand font-bold text-lg text-[#E6C987] tracking-wider">KHALILAVI GOLD</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl border-2 border-[#C5A059] overflow-hidden bg-[#051F18] shadow-lg shrink-0">
+                    <img
+                      src={`${import.meta.env.BASE_URL || './'}assets/khalilavi-logo.jpg`.replace('//', '/')}
+                      alt="نشان رسمی گالری طلا رضا خلیلاوی"
+                      className="w-full h-full object-cover scale-105"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-brand text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFF5DC] via-[#E6C987] to-[#A37B2E] tracking-wider">
+                      REZA KHALILAVI
+                    </div>
+                    <div className="font-bold text-sm text-[#F7E7C4]">
+                      گالری طلا، شمش و سکه رضا خلیلاوی
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="text-[#9DB0A7] text-xs leading-relaxed">
-                گالری طلا، شمش و مسکوکات خلیلاوی گلد؛ عرضه مستقیم مصنوعات طلای ۱۸ عیار، شمش‌های سوئیسی ۲۴ عیار و مسکوکات بانکی با فاکتور رسمی.
+              
+              <p className="text-[#A3B8B0] text-xs sm:text-sm leading-relaxed max-w-lg">
+                گالری طلای رضا خلیلاوی با بیش از ربع قرن حضور مداوم در بازار نادری اهواز، ارائه‌دهنده نفیس‌ترین مصنوعات طلای ۱۸ عیار، النگو و سرویس‌های مجلسی و همچنین تامین مستقیم شمش‌های استاندارد سوئیسی و مسکوکات ضرب بانک مرکزی با استعلام معتبر ری‌گیری.
               </p>
+
+              {/* Instagram Official Links */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <a
+                  href="https://instagram.com/khalilavi.jewellery"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#093226] border border-[#C5A059]/50 text-[#F5E2B3] text-xs font-bold hover:bg-[#C5A059] hover:text-[#051F18] transition-all cursor-pointer shadow-md group"
+                >
+                  <Instagram className="w-4 h-4 text-[#E6C987] group-hover:text-[#051F18] transition-colors shrink-0" />
+                  <span>اینستاگرام طلا:</span>
+                  <span className="font-mono dir-ltr">@khalilavi.jewellery</span>
+                </a>
+
+                <a
+                  href="https://instagram.com/khalilavi.gold"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#093226] border border-[#C5A059]/50 text-[#F5E2B3] text-xs font-bold hover:bg-[#C5A059] hover:text-[#051F18] transition-all cursor-pointer shadow-md group"
+                >
+                  <Instagram className="w-4 h-4 text-[#E6C987] group-hover:text-[#051F18] transition-colors shrink-0" />
+                  <span>اینستاگرام شمش و سکه:</span>
+                  <span className="font-mono dir-ltr">@khalilavi.gold</span>
+                </a>
+              </div>
             </div>
 
-            {/* Address 1 */}
-            <div className="space-y-2 text-[#9DB0A7]">
-              <h4 className="font-bold text-white text-xs">{BRANCHES.branch_jewelry.name}</h4>
-              <p className="leading-relaxed">{BRANCHES.branch_jewelry.address}</p>
-              <p className="font-mono text-[#E6C987]">{BRANCHES.branch_jewelry.phone}</p>
+            {/* Branch 1 Details (3 cols) */}
+            <div className="lg:col-span-3 space-y-4 bg-[#06231B]/70 p-5 rounded-2xl border border-[#C5A059]/25 backdrop-blur-xs">
+              <div className="flex items-center justify-between border-b border-[#C5A059]/20 pb-3">
+                <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#C5A059]" />
+                  <span>{BRANCHES.branch_jewelry.name}</span>
+                </h4>
+              </div>
+
+              <p className="text-xs text-[#C5D8CF] leading-relaxed">
+                {BRANCHES.branch_jewelry.address}
+              </p>
+
+              <div className="space-y-2 text-xs pt-2 border-t border-[#133F32]">
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>ساعات کاری:</span>
+                  <span className="text-[#E6C987] font-semibold">{BRANCHES.branch_jewelry.workingHours}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>تلفن تماس:</span>
+                  <a href={`tel:${BRANCHES.branch_jewelry.phone}`} className="font-mono text-sm font-bold text-white hover:text-[#E6C987] transition-colors">
+                    {BRANCHES.branch_jewelry.phone}
+                  </a>
+                </div>
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>مدیریت:</span>
+                  <span className="text-white font-medium">{BRANCHES.branch_jewelry.manager}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Address 2 */}
-            <div className="space-y-2 text-[#9DB0A7]">
-              <h4 className="font-bold text-white text-xs">{BRANCHES.branch_bullion.name}</h4>
-              <p className="leading-relaxed">{BRANCHES.branch_bullion.address}</p>
-              <p className="font-mono text-[#E6C987]">{BRANCHES.branch_bullion.phone}</p>
-            </div>
+            {/* Branch 2 Details & Fast Access (4 cols) */}
+            <div className="lg:col-span-4 space-y-4 bg-[#06231B]/70 p-5 rounded-2xl border border-[#C5A059]/25 backdrop-blur-xs">
+              <div className="flex items-center justify-between border-b border-[#C5A059]/20 pb-3">
+                <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#C5A059]" />
+                  <span>{BRANCHES.branch_bullion.name}</span>
+                </h4>
+              </div>
 
-            {/* Quick Links */}
-            <div className="space-y-2 text-[#9DB0A7]">
-              <h4 className="font-bold text-white text-xs">خدمات مشتریان</h4>
-              <ul className="space-y-1.5">
-                <li>
-                  <button onClick={() => setIsInstallmentGuideOpen(true)} className="hover:text-white cursor-pointer transition-colors">
-                    شرایط خرید اقساطی طلا و شمش
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => setIsBranchesModalOpen(true)} className="hover:text-white cursor-pointer transition-colors">
-                    نشانی و ساعات کاری شعب
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleRefreshRates} className="hover:text-white cursor-pointer transition-colors">
-                    بروزرسانی نرخ لحظه‌ای اتحادیه
-                  </button>
-                </li>
-              </ul>
+              <p className="text-xs text-[#C5D8CF] leading-relaxed">
+                {BRANCHES.branch_bullion.address}
+              </p>
+
+              <div className="space-y-2 text-xs pt-2 border-t border-[#133F32]">
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>ساعات کاری:</span>
+                  <span className="text-[#E6C987] font-semibold">{BRANCHES.branch_bullion.workingHours}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>تلفن سفارشات:</span>
+                  <a href={`tel:${BRANCHES.branch_bullion.phone}`} className="font-mono text-sm font-bold text-white hover:text-[#E6C987] transition-colors">
+                    {BRANCHES.branch_bullion.phone}
+                  </a>
+                </div>
+                <div className="flex justify-between items-center text-[#9DB0A7]">
+                  <span>فعالیت:</span>
+                  <span className="text-white font-medium">معاملات عمده و تک شمش و سکه</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#133F32]">
+                <button
+                  onClick={() => setIsInstallmentGuideOpen(true)}
+                  className="py-2.5 px-3 rounded-xl bg-[#0D4032] hover:bg-[#C5A059] hover:text-[#051F18] text-[#E6C987] font-bold text-[11px] transition-all cursor-pointer text-center"
+                >
+                  راهنمای خرید اقساطی
+                </button>
+                <button
+                  onClick={() => setIsBranchesModalOpen(true)}
+                  className="py-2.5 px-3 rounded-xl border border-[#C5A059]/60 hover:bg-[#C5A059] hover:text-[#051F18] text-white font-bold text-[11px] transition-all cursor-pointer text-center"
+                >
+                  لوکیشن شعب روی نقشه
+                </button>
+              </div>
             </div>
 
           </div>
 
-          <div className="pt-6 border-t border-[#123E32] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#7A9388]">
-            <div>
-              © کلیه حقوق برای خلیلاوی گلد (Khalilavi Gold) محفوظ است.
+          {/* Infinite Sliding Looped Marquee of KHALILAVI GOLD */}
+          <div className="relative py-10 sm:py-14 border-t border-b border-[#C5A059]/15 overflow-hidden select-none">
+            {/* Gradient Fades on edges for seamless infinity look */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-44 bg-gradient-to-r from-[#03110D] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-44 bg-gradient-to-l from-[#03110D] to-transparent z-10 pointer-events-none" />
+
+            <div dir="ltr" style={{ direction: 'ltr' }} className="w-full overflow-hidden flex select-none">
+              {/* Track 1 */}
+              <div dir="ltr" style={{ direction: 'ltr' }} className="flex shrink-0 items-center animate-footer-marquee">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="flex items-center gap-10 sm:gap-14 shrink-0 pr-10 sm:pr-14">
+                    <span className="font-brand font-black text-5xl sm:text-7xl lg:text-8xl tracking-[0.25em] text-[#E6C987]/12 whitespace-nowrap uppercase">
+                      KHALILAVI GOLD
+                    </span>
+                    <span className="text-[#C5A059]/25 text-2xl sm:text-3xl font-brand">✦</span>
+                    <span className="font-brand font-black text-5xl sm:text-7xl lg:text-8xl tracking-[0.25em] text-white/[0.07] whitespace-nowrap uppercase">
+                      REZA KHALILAVI
+                    </span>
+                    <span className="text-[#C5A059]/25 text-2xl sm:text-3xl font-brand">✦</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Track 2 (Clone for infinite seamless loop) */}
+              <div dir="ltr" style={{ direction: 'ltr' }} className="flex shrink-0 items-center animate-footer-marquee" aria-hidden="true">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={`clone-${item}`} className="flex items-center gap-10 sm:gap-14 shrink-0 pr-10 sm:pr-14">
+                    <span className="font-brand font-black text-5xl sm:text-7xl lg:text-8xl tracking-[0.25em] text-[#E6C987]/12 whitespace-nowrap uppercase">
+                      KHALILAVI GOLD
+                    </span>
+                    <span className="text-[#C5A059]/25 text-2xl sm:text-3xl font-brand">✦</span>
+                    <span className="font-brand font-black text-5xl sm:text-7xl lg:text-8xl tracking-[0.25em] text-white/[0.07] whitespace-nowrap uppercase">
+                      REZA KHALILAVI
+                    </span>
+                    <span className="text-[#C5A059]/25 text-2xl sm:text-3xl font-brand">✦</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span>عضو رسمی اتحادیه طلا و جواهر</span>
+          </div>
+
+          {/* Bottom Copyright & Trust Seals */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#7A9388]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>کلیه حقوق این سامانه متعلق به گالری خلیلاوی گلد (اهواز) می‌باشد.</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-[11px]">
+              <span>دارای جواز کسب رسمی از اتحادیه طلا و جواهر اهواز</span>
               <span>·</span>
-              <span>کد استاندارد: KG-750</span>
+              <span>کد عیارسنجی ری‌گیری: استاندارد ۷۵۰ و ۹۹۹.۹</span>
             </div>
           </div>
         </div>

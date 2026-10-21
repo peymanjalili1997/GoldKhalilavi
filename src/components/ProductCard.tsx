@@ -20,7 +20,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   index = 0
 }) => {
-  const { totalPrice, perGramFinal } = calculateProductPrice(product, rates);
+  const { totalPrice } = calculateProductPrice(product, rates);
 
   return (
     <motion.div
@@ -84,15 +84,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Pricing & Quick Add */}
         <div className="mt-5 pt-4 border-t border-[#EFE9DC] flex items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] text-[#8A7A5D] font-medium">قیمت لحظه‌ای با محاسبه کامل:</div>
-            <div className="text-lg sm:text-xl font-extrabold text-[#0B3B2E] tabular-nums mt-0.5">
+            <div className="text-lg sm:text-xl font-extrabold text-[#0B3B2E] tabular-nums">
               {formatPriceToman(totalPrice)} <span className="text-xs font-normal text-[#5C6E65]">تومان</span>
             </div>
-            {product.category !== 'coin' && (
-              <div className="text-[10px] text-[#7A8A80] tabular-nums mt-0.5">
-                پایه هر گرم تمام‌شده: {formatPriceToman(perGramFinal)} ت
-              </div>
-            )}
           </div>
 
           <motion.button

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
-  body {
+  body, h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea {
     font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
     background-color: #FAF7F2;
     color: #11221C;
     direction: rtl;
@@ -11,7 +18,12 @@
   }
 
   .font-brand {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: 'Cormorant Garamond', 'Vazirmatn', Georgia, serif;
+  }
+
+  .font-persian-title {
+    font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.015em;
   }
 }
 
@@ -21,16 +33,30 @@
     transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translate3d(50%, 0, 0);
+    transform: translate3d(33.333%, 0, 0);
   }
 }
 
 .animate-ticker {
-  animation: ticker 35s linear infinite;
+  animation: ticker 65s linear infinite;
 }
 
 .animate-ticker:hover {
   animation-play-state: paused;
+}
+
+@keyframes footerMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.animate-footer-marquee {
+  animation: footerMarquee 85s linear infinite;
+  will-change: transform;
 }
 
 /* Smooth custom scrollbars */

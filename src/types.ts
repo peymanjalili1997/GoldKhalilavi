@@ -10,6 +10,9 @@ export interface BranchInfo {
   phone: string;
   workingHours: string;
   specialty: string;
+  instagramHandle?: string;
+  instagramUrl?: string;
+  manager?: string;
 }
 
 export interface LiveMarketRates {

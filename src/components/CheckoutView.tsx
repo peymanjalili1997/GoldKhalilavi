@@ -228,8 +228,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   className="mt-1 accent-[#0B3B2E]"
                 />
                 <div className="text-xs">
-                  <div className="font-bold text-[#11221C]">تحویل حضوری در شعبه ۱ (گالری مرکزی بازار بزرگ تهران)</div>
-                  <div className="text-[#65786E] text-[11px] mt-1">نشانی: تهران، بازار بزرگ، سرای زرگران، پلاک ۱۰۴</div>
+                  <div className="font-bold text-[#11221C]">تحویل حضوری در شعبه ۱: طلا رضا خلیلاوی</div>
+                  <div className="text-[#65786E] text-[11px] mt-1">نشانی: اهواز، خیابان نادری، بین دو درب کارون، پاساژ حسنی</div>
                 </div>
               </label>
 
@@ -242,8 +242,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   className="mt-1 accent-[#0B3B2E]"
                 />
                 <div className="text-xs">
-                  <div className="font-bold text-[#11221C]">تحویل حضوری در شعبه ۲ (برج تجارت طلا کریمخان)</div>
-                  <div className="text-[#65786E] text-[11px] mt-1">نشانی: تهران، خیابان کریمخان زند، نبش عضدی، برج تجارت طلا، واحد ۱۲</div>
+                  <div className="font-bold text-[#11221C]">تحویل حضوری در شعبه ۲: شمش رضا خلیلاوی (شمش و سکه آینور)</div>
+                  <div className="text-[#65786E] text-[11px] mt-1">نشانی: اهواز، اول نادری، به سمت سی‌متری، پشت کیوسک بانک شهر</div>
                 </div>
               </label>
             </div>
